@@ -1,6 +1,6 @@
 // Pipeline CI del laboratorio DevSecOps
-// Compila, testea, escanea dependencias y configuración con Trivy,
-// analiza con SonarQube y se para si algo no pasa los controles de seguridad
+// Busca secretos en el historial con Gitleaks, compila, testea, escanea dependencias
+// y configuración con Trivy, analiza con SonarQube y se para si algo no pasa los controles
 pipeline {
     agent any
 
@@ -16,9 +16,43 @@ pipeline {
         TRIVY_VERSION = '0.75.0'
         TRIVY_CHECKSUMS_SHA256 = '43a87485d39b60dae55cb1a14725dddd612040c0b1ec4caa88948c07d6c06219'
         TRIVY = "${JENKINS_HOME}/tools/trivy-${TRIVY_VERSION}/trivy"
+
+        // Gitleaks: misma política, versión fijada y huella del checksums.txt verificada en la release oficial
+        GITLEAKS_VERSION = '8.30.1'
+        GITLEAKS_CHECKSUMS_SHA256 = '061476c21adaf5441516f96f185c1a4706a83cd6329b9b38762271b3d4a52fae'
+        GITLEAKS = "${JENKINS_HOME}/tools/gitleaks-${GITLEAKS_VERSION}/gitleaks"
     }
 
     stages {
+        stage('Instalar Gitleaks (verificado)') {
+            steps {
+                sh '''
+                    set -eu
+                    GL_DIR="$JENKINS_HOME/tools/gitleaks-$GITLEAKS_VERSION"
+                    if [ ! -x "$GL_DIR/gitleaks" ]; then
+                        mkdir -p "$GL_DIR"
+                        cd "$GL_DIR"
+                        BASE="https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION"
+                        curl -fsSLO "$BASE/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+                        echo "$GITLEAKS_CHECKSUMS_SHA256  gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum -c -
+                        curl -fsSLO "$BASE/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+                        grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum -c -
+                        tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+                        rm -f "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+                    fi
+                    "$GL_DIR/gitleaks" version
+                '''
+            }
+        }
+
+        stage('Gitleaks: secretos en el historial') {
+            steps {
+                // Primer control: si hay un secreto en cualquier commit, no se compila nada más.
+                // --redact evita que el secreto aparezca en los logs de Jenkins
+                sh '"$GITLEAKS" git --redact -v --exit-code 1 .'
+            }
+        }
+
         stage('Build y tests') {
             steps {
                 dir('app') {
@@ -94,7 +128,7 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline OK: build, tests, Trivy y quality gate superados'
+            echo 'Pipeline OK: Gitleaks, build, tests, Trivy y quality gate superados'
         }
         failure {
             echo 'Pipeline FALLIDO: revisa la etapa en rojo'
