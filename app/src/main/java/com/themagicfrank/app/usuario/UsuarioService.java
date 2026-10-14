@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 
 import org.springframework.stereotype.Service;
 
@@ -39,12 +39,12 @@ public class UsuarioService {
         return true;
     }
 
-    // VULNERABLE (DSL-11): construye la consulta concatenando la entrada del usuario.
-    // Permite inyeccion SQL. Se corrige en el commit siguiente con consulta parametrizada.
-    @SuppressWarnings("unchecked")
+    // Seguridad (DSL-11): consulta parametrizada. El valor viaja como parametro :nombre,
+    // nunca concatenado, asi la base de datos lo trata siempre como dato y no como SQL.
     public List<Usuario> buscarPorNombre(String nombre) {
-        String sql = "SELECT * FROM usuario WHERE nombre = '" + nombre + "'";
-        Query query = entityManager.createNativeQuery(sql, Usuario.class);
+        TypedQuery<Usuario> query = entityManager.createQuery(
+                "SELECT u FROM Usuario u WHERE u.nombre = :nombre", Usuario.class);
+        query.setParameter("nombre", nombre);
         return query.getResultList();
     }
 }
