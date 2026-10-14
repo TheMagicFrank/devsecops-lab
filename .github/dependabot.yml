@@ -1,0 +1,22 @@
+# Dependabot (DSL-9): abre PR automáticas cuando hay versiones nuevas.
+# Cada PR se revisa y se valida con el pipeline (Trivy + SonarQube) antes de fusionar.
+version: 2
+updates:
+  # Librerías Java de la app (pom.xml)
+  - package-ecosystem: "maven"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Imágenes base del Dockerfile (actualiza etiqueta y digest)
+  - package-ecosystem: "docker"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+
+  # Imágenes de Jenkins, SonarQube y PostgreSQL del docker-compose
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
