@@ -18,7 +18,7 @@ RUN mvn -B package -DskipTests
 
 # ---------- Etapa 2: ejecución ----------
 # Solo el JRE (sin compilador ni Maven): imagen más pequeña y menos superficie de ataque
-FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555
+FROM eclipse-temurin:25-jre-alpine@sha256:3c0a9084927a221ccd1d007fcaf614465672c0af37aaa834c5184483afe56d61
 WORKDIR /app
 
 # Seguridad: usuario sin privilegios; la app nunca se ejecuta como root
