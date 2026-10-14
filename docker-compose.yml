@@ -1,9 +1,10 @@
 # Infraestructura CI del laboratorio: Jenkins + SonarQube + PostgreSQL
 # Los secretos se leen del archivo .env (que NO se sube a Git)
+# Imágenes fijadas por digest (DSL-9): la etiqueta es solo informativa; Docker usa el sha256
 
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk21
+    image: jenkins/jenkins:lts-jdk21@sha256:a660310e39ade10631f774bacd5219de767dfd08947ea5c32a739b5e5bb382c1
     container_name: jenkins
     restart: unless-stopped
     ports:
@@ -13,7 +14,7 @@ services:
       - jenkins_home:/var/jenkins_home
 
   sonarqube:
-    image: sonarqube:community
+    image: sonarqube:community@sha256:2e378f7852b67d43507d3d383ee8fb5a522b8b0f920be9803f74f72952fce8f1
     container_name: sonarqube
     restart: unless-stopped
     depends_on:
@@ -33,7 +34,7 @@ services:
       - sonarqube_logs:/opt/sonarqube/logs
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
     container_name: sonarqube-db
     restart: unless-stopped
     environment:
