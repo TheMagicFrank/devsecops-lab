@@ -35,8 +35,10 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> crear(@RequestBody Usuario usuario) {
-        Usuario creado = service.crear(usuario);
+    public ResponseEntity<Usuario> crear(@RequestBody UsuarioRequest request) {
+        // Seguridad (DSL-14): se recibe un DTO, no la entidad JPA,
+        // para que el cliente no pueda fijar el id y sobrescribir usuarios existentes
+        Usuario creado = service.crear(request.toEntity());
         return ResponseEntity.created(URI.create("/api/usuarios/" + creado.getId())).body(creado);
     }
 
