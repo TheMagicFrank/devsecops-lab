@@ -1,0 +1,57 @@
+# Infraestructura CI del laboratorio: Jenkins + SonarQube + PostgreSQL
+# Los secretos se leen del archivo .env (que NO se sube a Git)
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      # Solo accesible desde este PC (8081 porque la app usa el 8080)
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD}
+      # Webhook a Jenkins por la red interna de Docker; se compensa con secreto HMAC
+      SONAR_VALIDATEWEBHOOKS: "false"
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
+  db:
+    image: postgres:16-alpine
+    container_name: sonarqube-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sonar
+      POSTGRES_USER: ${SONAR_DB_USER}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD}
+    # Sin "ports": la base de datos solo es accesible desde la red interna de Docker
+    volumes:
+      - sonarqube_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SONAR_DB_USER} -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  sonarqube_db:
