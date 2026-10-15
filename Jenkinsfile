@@ -110,7 +110,7 @@ pipeline {
                 dir('app') {
                     // El token se inyecta desde las credenciales de Jenkins: nunca aparece en el código
                     withSonarQubeEnv('sonarqube') {
-                        sh './mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=devsecops-lab -Dsonar.projectName=devsecops-lab'
+                        sh './mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar -Dsonar.projectKey=devsecops-lab -Dsonar.projectName=devsecops-lab'
                     }
                 }
             }
