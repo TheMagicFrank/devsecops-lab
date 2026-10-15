@@ -1,22 +1,39 @@
-# Dependabot (DSL-9): abre PR automáticas cuando hay versiones nuevas.
-# Cada PR se revisa y se valida con el pipeline (Trivy + SonarQube) antes de fusionar.
+# Dependabot (DSL-9, ajustado en DSL-12): abre PR automaticas cuando hay versiones nuevas.
+# Cada PR pasa el pipeline de GitHub Actions (Gitleaks, Trivy, SonarCloud) y se revisa antes de fusionar.
+# Los saltos de version MAYOR se ignoran: son decisiones deliberadas (Java LTS, migracion de PostgreSQL)
+# y se planifican a mano. Si se aceptan parches, versiones menores y actualizaciones de digest.
 version: 2
 updates:
-  # Librerías Java de la app (pom.xml)
+  # Librerias Java de la app (pom.xml)
   - package-ecosystem: "maven"
     directory: "/app"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # Imágenes base del Dockerfile (actualiza etiqueta y digest)
+  # Imagenes base del Dockerfile (etiqueta y digest)
   - package-ecosystem: "docker"
     directory: "/app"
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
-  # Imágenes de Jenkins, SonarQube y PostgreSQL del docker-compose
+  # Imagenes de Jenkins, SonarQube y PostgreSQL del docker-compose
   - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Acciones de GitHub fijadas por SHA en los workflows (actions/checkout)
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
