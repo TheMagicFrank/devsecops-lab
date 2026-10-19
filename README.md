@@ -50,6 +50,7 @@ GitHub Actions ejecuta el mismo orden y añade el **escaneo de la imagen Docker*
 | **8 CVE** (3 CRITICAL en Tomcat 11.0.24, 5 HIGH en Jackson 3.1.5) | Trivy SCA | Versiones corregidas fijadas en el `pom.xml` (Tomcat 11.0.25, Jackson 3.1.7) (DSL-9) |
 | Token falso commiteado y borrado (demostración en una rama local nunca subida) | Gitleaks | Detectado en el historial aunque se borró en el commit siguiente (DSL-10) |
 | 2 CVE transitivas (JAXB XXE, Logback path traversal) | SonarQube Cloud SCA | No aplicables al proyecto: aceptadas con justificación escrita (DSL-12) |
+| **CVE-2026-77214** (HIGH) en libexpat 2.8.5-r0 de la imagen base `eclipse-temurin:21-jre-alpine` | Trivy, escaneo de imagen en GitHub Actions | Parche temporal en el Dockerfile (libexpat 2.9.0-r0) y verificado con Trivy: 0 hallazgos (DSL-18) |
 
 ### Inyección SQL: antes y después
 
@@ -76,6 +77,18 @@ GitHub Actions ejecuta el mismo orden y añade el **escaneo de la imagen Docker*
 ### Riesgo aceptado con justificación
 
 ![Riesgo aceptado en SonarQube Cloud](docs/img/134-dsl12-riesgo-aceptado-jaxb.png)
+
+### Mantenimiento: CVE nueva en la imagen base (DSL-18)
+
+Con el laboratorio terminado, la PR de documentación salió en rojo: el escaneo de la imagen detectó una CVE HIGH en libexpat de la imagen base. El código no había cambiado; la imagen base fijada por digest ya era la última publicada y Dependabot no tenía nada que proponer. Se trató como bug y se añadió `apk add --no-cache --upgrade libexpat` en la etapa final del Dockerfile, con un comentario de cuándo quitarlo.
+
+![Actions en rojo por Trivy](docs/img/140-dsl13-actions-trivy-imagen-rojo.png)
+
+![CVE-2026-77214 en libexpat](docs/img/141-dsl18-trivy-cve-libexpat.png)
+
+![Imagen parcheada: 0 hallazgos](docs/img/144-dsl18-trivy-imagen-parcheada.png)
+
+**Contrapartida:** la imagen deja de ser 100 % reproducible (el paquete se resuelve al construir) hasta que la imagen base incluya el parche.
 
 ## Decisiones de seguridad
 
@@ -146,6 +159,7 @@ Espacio Scrum **DevSecOps Lab** (clave `DSL`) con los estados To Do, In Progress
 - Token de SonarQube Cloud con caducidad el 13 de enero de 2027: rotar.
 - La contraseña de PostgreSQL del `.env` se generó con `Get-Random`, que no es criptográficamente seguro. Vale para un laboratorio local; para un entorno real, usar `RandomNumberGenerator`.
 - Las 2 CVE transitivas aceptadas (JAXB y Logback) se revisarán al actualizar Spring Boot.
+- Parche temporal de libexpat en el Dockerfile (DSL-18): quitar la línea `apk add` cuando la imagen base `eclipse-temurin:21-jre-alpine` incluya la versión corregida.
 
 ## Licencia
 
