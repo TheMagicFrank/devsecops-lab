@@ -21,6 +21,10 @@ RUN mvn -B package -DskipTests
 FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555
 WORKDIR /app
 
+# Seguridad (DSL-18): parche de CVE-2026-77214 (libexpat) mientras la imagen base no lo incluya.
+# Quitar cuando Dependabot proponga un digest de eclipse-temurin con libexpat 2.9.0 o superior.
+RUN apk add --no-cache --upgrade libexpat
+
 # Seguridad: usuario sin privilegios; la app nunca se ejecuta como root
 RUN addgroup -S app && adduser -S app -G app
 
