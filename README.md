@@ -3,7 +3,7 @@
 [![CI DevSecOps](https://github.com/TheMagicFrank/devsecops-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/TheMagicFrank/devsecops-lab/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=TheMagicFrank_devsecops-lab&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=TheMagicFrank_devsecops-lab)
 
-Laboratorio DevSecOps montado desde cero: una API REST en **Java 21 + Spring Boot 4.1.1** con un pipeline de CI que integra la seguridad en cada paso. El mismo pipeline funciona en **Jenkins** (local, con Docker) y en **GitHub Actions** (nube, con SonarQube Cloud). Todo el trabajo se planificó en sprints de **Jira**, con una rama y una Pull Request revisada por cada tarea o bloque de trabajo.
+Laboratorio DevSecOps que he montado desde cero: una API REST en **Java 21 + Spring Boot 4.1.1** con un pipeline de CI que integra la seguridad en cada paso. El mismo pipeline funciona en **Jenkins** (local, con Docker) y en **GitHub Actions** (nube, con SonarQube Cloud). Planifiqué todo el trabajo en sprints de **Jira**, con una rama y una Pull Request revisada por cada tarea o bloque de trabajo.
 
 📄 **Guía completa con todas las capturas, paso a paso:** [`docs/guia-devsecops-lab.pdf`](docs/guia-devsecops-lab.pdf)
 
@@ -33,9 +33,9 @@ GitHub Actions ejecuta el mismo orden y añade el **escaneo de la imagen Docker*
 | Área | Herramienta |
 |---|---|
 | Aplicación | Java 21, Spring Boot 4.1.1, Spring Data JPA, H2, Maven |
-| Contenedores | Docker (multi-stage, JRE 21 Alpine), docker-compose |
+| Contenedores | Docker (multi-stage, JRE 21 Alpine), docker-compose, PostgreSQL (para SonarQube) |
 | CI | Jenkins LTS (JDK 21), GitHub Actions |
-| SAST | SonarQube Community (local), SonarQube Cloud |
+| SAST | SonarQube Community Build (local), SonarQube Cloud |
 | SCA, IaC e imagen | Trivy 0.75.0 |
 | Secretos | Gitleaks 8.30.1 |
 | Dependencias | Dependabot (Maven, Docker, docker-compose y GitHub Actions) |
@@ -46,7 +46,7 @@ GitHub Actions ejecuta el mismo orden y añade el **escaneo de la imagen Docker*
 | Hallazgo | Detectado por | Resolución |
 |---|---|---|
 | **Mass assignment** (High) en `POST /api/usuarios`: el controlador recibía la entidad JPA y se podía sobrescribir otro usuario enviando `"id"` | SonarQube | Explotado en local, corregido con un DTO y test de regresión, y verificado con el mismo ataque (DSL-14) |
-| **Inyección SQL** introducida a propósito en `GET /api/usuarios/buscar` | SonarQube + quality gate | Pipeline en rojo; corregida con consulta parametrizada y 2 tests de regresión (DSL-11) |
+| **Inyección SQL** que introduje a propósito en `GET /api/usuarios/buscar` | SonarQube + quality gate | Pipeline en rojo; corregida con consulta parametrizada y 2 tests de regresión (DSL-11) |
 | **8 CVE** (3 CRITICAL en Tomcat 11.0.24, 5 HIGH en Jackson 3.1.5) | Trivy SCA | Versiones corregidas fijadas en el `pom.xml` (Tomcat 11.0.25, Jackson 3.1.7) (DSL-9) |
 | Token falso commiteado y borrado (demostración en una rama local nunca subida) | Gitleaks | Detectado en el historial aunque se borró en el commit siguiente (DSL-10) |
 | 2 CVE transitivas (JAXB XXE, Logback path traversal) | SonarQube Cloud SCA | No aplicables al proyecto: aceptadas con justificación escrita (DSL-12) |
@@ -80,7 +80,7 @@ GitHub Actions ejecuta el mismo orden y añade el **escaneo de la imagen Docker*
 
 ### Mantenimiento: CVE nueva en la imagen base (DSL-18)
 
-Con el laboratorio terminado, la PR de documentación salió en rojo: el escaneo de la imagen detectó una CVE HIGH en libexpat de la imagen base. El código no había cambiado; la imagen base fijada por digest ya era la última publicada y Dependabot no tenía nada que proponer. Se trató como bug y se añadió `apk add --no-cache --upgrade libexpat` en la etapa final del Dockerfile, con un comentario de cuándo quitarlo.
+Con el laboratorio ya terminado, la PR de documentación salió en rojo: el escaneo de la imagen detectó una CVE HIGH en libexpat, dentro de la imagen base. El código no había cambiado; la imagen base fijada por digest ya era la última publicada y Dependabot no tenía nada que proponer. Lo traté como un bug más y añadí `apk add --no-cache --upgrade libexpat` en la etapa final del Dockerfile, con un comentario de cuándo quitarlo.
 
 ![Actions en rojo por Trivy](docs/img/140-dsl13-actions-trivy-imagen-rojo.png)
 
@@ -98,7 +98,8 @@ Con el laboratorio terminado, la PR de documentación salió en rojo: el escaneo
 - **Cadena de suministro:** Gitleaks, Trivy y el plugin de Sonar con versión fijada; binarios verificados con SHA-256 (por el ataque a la cadena de suministro de Trivy de marzo de 2026); imágenes base fijadas por `etiqueta@sha256`; `actions/checkout` fijada por SHA de commit; Dependabot revisado a mano (se ignoran los saltos de versión mayor).
 - **Webhook SonarQube → Jenkins:** SonarQube lo bloquea por su protección anti-SSRF (red interna de Docker). Se desactiva esa validación y se compensa con un **secreto HMAC**: Jenkins solo acepta avisos firmados.
 - **GitHub Actions sin exponer secretos:** el trigger es `pull_request` (no `pull_request_target`), así que las PR que vengan de forks no reciben secrets, y `SONAR_TOKEN` solo existe en el paso del análisis, no en todo el job.
-- **Sin `docker.sock` en Jenkins:** montarlo daría control del host al contenedor. El escaneo de la imagen se hace en local y en GitHub Actions.
+- **Sin `docker.sock` en Jenkins:** montarlo daría control del host al contenedor. El escaneo de la imagen lo hago en local y en GitHub Actions.
+- **Rama `main` protegida:** una regla del repositorio obliga a integrar por Pull Request y con el pipeline de GitHub Actions en verde, y bloquea los force push. Un push directo a `main` se rechaza.
 
 ## Estructura
 
@@ -145,7 +146,7 @@ La configuración de Jenkins y SonarQube (token, credenciales, webhook con HMAC 
 
 ## Trabajo con Jira
 
-Espacio Scrum **DevSecOps Lab** (clave `DSL`) con los estados To Do, In Progress, In Review y Done. Cuatro sprints, una rama y una PR por tarea o bloque de trabajo, y commits con la clave de Jira.
+Organicé el trabajo en un espacio Scrum, **DevSecOps Lab** (clave `DSL`), con los estados To Do, In Progress, In Review y Done: cuatro sprints, una rama y una PR por tarea o bloque de trabajo, y commits con la clave de Jira.
 
 ![Tablero del Sprint 3 completado](docs/img/117-dsl11-jira-sprint3-done.png)
 
@@ -156,7 +157,7 @@ Espacio Scrum **DevSecOps Lab** (clave `DSL`) con los estados To Do, In Progress
 - Falta un test de regresión a nivel HTTP para el mass assignment.
 - Versiones de Tomcat y Jackson forzadas en el `pom.xml`: quitarlas cuando Spring Boot las incluya.
 - Trivy 0.76.0 disponible: actualizar con la misma verificación.
-- Token de SonarQube Cloud con caducidad el 13 de enero de 2027: rotar.
+- Los tokens de SonarQube (local y Cloud) tienen caducidad: hay que rotarlos antes de que caduquen.
 - La contraseña de PostgreSQL del `.env` se generó con `Get-Random`, que no es criptográficamente seguro. Vale para un laboratorio local; para un entorno real, usar `RandomNumberGenerator`.
 - Las 2 CVE transitivas aceptadas (JAXB y Logback) se revisarán al actualizar Spring Boot.
 - Parche temporal de libexpat en el Dockerfile (DSL-18): quitar la línea `apk add` cuando la imagen base `eclipse-temurin:21-jre-alpine` incluya la versión corregida.
