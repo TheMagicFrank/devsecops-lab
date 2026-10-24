@@ -14,7 +14,7 @@ services:
       - jenkins_home:/var/jenkins_home
 
   sonarqube:
-    image: sonarqube:community@sha256:2e378f7852b67d43507d3d383ee8fb5a522b8b0f920be9803f74f72952fce8f1
+    image: sonarqube:community@sha256:0b3408443fb6a311253de27941b10977c9b977fd53be2265947bfe14161308b8
     container_name: sonarqube
     restart: unless-stopped
     depends_on:
