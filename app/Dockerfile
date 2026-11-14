@@ -18,7 +18,7 @@ RUN mvn -B package -DskipTests
 
 # ---------- Etapa 2: ejecución ----------
 # Solo el JRE (sin compilador ni Maven): imagen más pequeña y menos superficie de ataque
-FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555
+FROM eclipse-temurin:21-jre-alpine@sha256:ac05c3c42b7c2f1a52c9bd52f01041fa1958231b15ebeae7420429cbc5baf474
 WORKDIR /app
 
 # Seguridad (DSL-18): parche de CVE-2026-77214 (libexpat) mientras la imagen base no lo incluya.
